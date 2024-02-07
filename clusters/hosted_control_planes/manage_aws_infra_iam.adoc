@@ -1,0 +1,569 @@
+[#hosted-control-planes-manage-aws-infra-iam]
+= Managing AWS infrastructure and IAM permissions for hosted control planes (Technology Preview)
+
+When you use hosted control planes for {ocp} on AWS, the infrastructure requirements vary based on your setup. 
+
+* <<hosted-aws-infra-iam-prereqs,Prerequisites>>
+* <<hosting-cluster-aws-infra-reqs,AWS infrastructure requirements>>
+* <<iam-aws,Identity and Access Management permissions>>
+* <<hosting-cluster-aws-infra-iam-separate,Creating AWS infrastructure and IAM resources separately>>
+
+[#hosted-aws-infra-iam-prereqs]
+== Prerequisites
+
+You must configure hosted control planes before you can create hosted control plane clusters. See xref:../../clusters/hosted_control_planes/aws_intro.adoc#hosting-service-cluster-configure-aws[Configuring hosted control plane clusters on AWS (Technology Preview)] for more information.
+
+[#hosting-cluster-aws-infra-reqs]
+== AWS infrastructure requirements
+
+When you use hosted control planes on AWS, the infrastructure requirements fit in the following categories:
+
+* Prerequired and unmanaged infrastructure for the HyperShift Operator in an arbitrary AWS account
+* Prerequired and unmanaged infrastructure in a hosted cluster AWS account
+* Hosted control planes-managed infrastructure in a management AWS account
+* Hosted control planes-managed infrastructure in a hosted cluster AWS account
+* Kubernetes-managed infrastructure in a hosted cluster AWS account
+
+_Prerequired_ means that hosted control planes requires AWS infrastructure to properly work. _Unmanaged_ means that no Operator or controller creates the infrastructure for you. The following sections contain details about the creation of the AWS resources.
+
+[#infra-prerequired-unmanaged-for-ho]
+=== Prerequired and unmanaged infrastructure for the HyperShift Operator in an arbitrary AWS account
+
+An arbitrary AWS account depends on the provider of the hosted control planes service. 
+
+In self-managed hosted control planes, the cluster service provider controls the AWS account. The _cluster service provider_ is the administrator who hosts cluster control planes and is responsible for uptime. In managed hosted control planes, the AWS account belongs to Red&nbsp;Hat.
+
+In a prerequired and unmanaged infrastructure for the HyperShift Operator, the following infrastructure requirements apply for a management cluster AWS account:
+
+* One S3 Bucket
+** OpenID Connect (OIDC)
+* Route 53 hosted zones
+** A domain to host private and public entries for hosted clusters
+
+[#infra-prerequired-unmanaged-hosted-cluster-aws]
+=== Prerequired and unmanaged infrastructure in a hosted cluster AWS account
+
+When your infrastructure is prerequired and unmanaged in a hosted cluster AWS account, the infrastructure requirements for all access modes are as follows:
+
+* One VPC
+* One DHCP Option
+* Two subnets
+** A private subnet that is an internal data plane subnet
+** A public subnet that enables access to the internet from the data plane
+* One internet gateway
+* One elastic IP
+* One NAT gateway
+* One security group (worker nodes)
+* Two route tables (one private and one public)
+* Two Route 53 hosted zones
+* Enough quota for the following items:
+** One Ingress service load balancer for public hosted clusters
+** One private link endpoint for private hosted clusters
+
+*Note:* For private link networking to work, the endpoint zone in the hosted cluster AWS account must match the zone of the instance that is resolved by the service endpoint in the management cluster AWS account. In AWS, the zone names are aliases, such as `us-east-2b`, which do not necessarily map to the same zone in different accounts. As a result, for private link to work, the management cluster must have subnets or workers in all zones of its region.
+
+[#infra-managed-by-hypershift-mgmt-aws-acct]
+=== Hosted control planes-managed infrastructure in a management AWS account
+
+When your infrastructure is managed by hosted control planes in a management AWS account, the infrastructure requirements differ depending on whether your clusters are public, private, or a combination.
+
+For accounts with public clusters, the infrastructure requirements are as follows:
+
+* Network load balancer: a load balancer Kube API server
+** Kubernetes creates a security group
+* Volumes
+** For etcd (one or three depending on high availability)
+** For OVN-Kube
+
+For accounts with private clusters, the infrastructure requirements are as follows:
+
+* Network load balancer: a load balancer private router
+* Endpoint service (private link)
+
+For accounts with public and private clusters, the infrastructure requirements are as follows:
+
+* Network load balancer: a load balancer public router
+* Network load balancer: a load balancer private router
+* Endpoint service (private link)
+* Volumes:
+** For etcd (one or three depending on high availability)
+** For OVN-Kube
+
+[#infra-managed-by-hypershift-in-hosted-cluster-aws-acct]
+=== Hosted control planes-managed infrastructure in a hosted cluster AWS account
+
+When your infrastructure is managed by hosted control planes in a hosted cluster AWS account, the infrastructure requirements differ depending on whether your clusters are public, private, or a combination.
+
+For accounts with public clusters, the infrastructure requirements are as follows:
+
+* Node pools must have EC2 instances that have `Role` and `RolePolicy` defined.
+
+For accounts with private clusters, the infrastructure requirements are as follows:
+
+* One private link endpoint for each availability zone
+* EC2 instances for node pools
+
+For accounts with public and private clusters, the infrastructure requirements are as follows:
+
+* One private link endpoint for each availability zone
+* EC2 instances for node pools
+
+[#infra-managed-by-kubernetes-in-hosted-cluster-aws-acct]
+=== Kubernetes-managed infrastructure in a hosted cluster AWS account
+
+When Kubernetes manages your infrastructure in a hosted cluster AWS account, the infrastructure requirements are as follows:
+
+* A network load balancer for default Ingress
+* An S3 bucket for registry
+
+[#iam-aws]
+== Identity and Access Management (IAM) permissions
+
+In the context of hosted control planes, the consumer is responsible to create the Amazon Resource Name (ARN) roles. The _consumer_ is an automated process to generate the permissions files. The consumer might be the command line interface or OpenShift Cluster Manager. Hosted control planes tries to enable granularity to honor the principle of least-privilege components, which means that every component uses its own role to operate or create AWS objects, and the roles are limited to what is required for the product to function normally.
+
+
+For an example of how the command line interface can create the ARN roles, see "Creating AWS infrastructure and IAM resources separately".
+
+The hosted cluster receives the ARN roles as input and the consumer creates an AWS permission configuration for each component. As a result, the component can authenticate through STS and preconfigured OIDC IDP.
+
+The following roles are consumed by some of the components from hosted control planes that run on the control plane and operate on the data plane:
+
+* `controlPlaneOperatorARN`
+* `imageRegistryARN`
+* `ingressARN`
+* `kubeCloudControllerARN`
+* `nodePoolManagementARN`
+* `storageARN`
+* `networkARN`
+
+The following example shows a reference to the IAM roles from the hosted cluster:
+----
+...
+endpointAccess: Public
+  region: us-east-2
+  resourceTags:
+  - key: kubernetes.io/cluster/example-cluster-bz4j5
+    value: owned
+rolesRef:
+    controlPlaneOperatorARN: arn:aws:iam::820196288204:role/example-cluster-bz4j5-control-plane-operator
+    imageRegistryARN: arn:aws:iam::820196288204:role/example-cluster-bz4j5-openshift-image-registry
+    ingressARN: arn:aws:iam::820196288204:role/example-cluster-bz4j5-openshift-ingress
+    kubeCloudControllerARN: arn:aws:iam::820196288204:role/example-cluster-bz4j5-cloud-controller
+    networkARN: arn:aws:iam::820196288204:role/example-cluster-bz4j5-cloud-network-config-controller
+    nodePoolManagementARN: arn:aws:iam::820196288204:role/example-cluster-bz4j5-node-pool
+    storageARN: arn:aws:iam::820196288204:role/example-cluster-bz4j5-aws-ebs-csi-driver-controller
+type: AWS
+...
+----
+
+The roles that hosted control planes uses are shown in the following examples:
+
+* `ingressARN`
++
+----
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "elasticloadbalancing:DescribeLoadBalancers",
+                "tag:GetResources",
+                "route53:ListHostedZones"
+            ],
+            "Resource": "\*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "route53:ChangeResourceRecordSets"
+            ],
+            "Resource": [
+                "arn:aws:route53:::PUBLIC_ZONE_ID",
+                "arn:aws:route53:::PRIVATE_ZONE_ID"
+            ]
+        }
+    ]
+}
+----
+* `imageRegistryARN`
++
+----
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:CreateBucket",
+                "s3:DeleteBucket",
+                "s3:PutBucketTagging",
+                "s3:GetBucketTagging",
+                "s3:PutBucketPublicAccessBlock",
+                "s3:GetBucketPublicAccessBlock",
+                "s3:PutEncryptionConfiguration",
+                "s3:GetEncryptionConfiguration",
+                "s3:PutLifecycleConfiguration",
+                "s3:GetLifecycleConfiguration",
+                "s3:GetBucketLocation",
+                "s3:ListBucket",
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:ListBucketMultipartUploads",
+                "s3:AbortMultipartUpload",
+                "s3:ListMultipartUploadParts"
+            ],
+            "Resource": "\*"
+        }
+    ]
+}
+----
+* `storageARN`
++
+----
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:AttachVolume",
+                "ec2:CreateSnapshot",
+                "ec2:CreateTags",
+                "ec2:CreateVolume",
+                "ec2:DeleteSnapshot",
+                "ec2:DeleteTags",
+                "ec2:DeleteVolume",
+                "ec2:DescribeInstances",
+                "ec2:DescribeSnapshots",
+                "ec2:DescribeTags",
+                "ec2:DescribeVolumes",
+                "ec2:DescribeVolumesModifications",
+                "ec2:DetachVolume",
+                "ec2:ModifyVolume"
+            ],
+            "Resource": "\*"
+        }
+    ]
+}
+----
+* `networkARN`
++
+----
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeInstances",
+                "ec2:DescribeInstanceStatus",
+                "ec2:DescribeInstanceTypes",
+                "ec2:UnassignPrivateIpAddresses",
+                "ec2:AssignPrivateIpAddresses",
+                "ec2:UnassignIpv6Addresses",
+                "ec2:AssignIpv6Addresses",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeNetworkInterfaces"
+            ],
+            "Resource": "\*"
+        }
+    ]
+}
+----
+* `kubeCloudControllerARN`
++
+----
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "ec2:DescribeInstances",
+                "ec2:DescribeImages",
+                "ec2:DescribeRegions",
+                "ec2:DescribeRouteTables",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeVolumes",
+                "ec2:CreateSecurityGroup",
+                "ec2:CreateTags",
+                "ec2:CreateVolume",
+                "ec2:ModifyInstanceAttribute",
+                "ec2:ModifyVolume",
+                "ec2:AttachVolume",
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:CreateRoute",
+                "ec2:DeleteRoute",
+                "ec2:DeleteSecurityGroup",
+                "ec2:DeleteVolume",
+                "ec2:DetachVolume",
+                "ec2:RevokeSecurityGroupIngress",
+                "ec2:DescribeVpcs",
+                "elasticloadbalancing:AddTags",
+                "elasticloadbalancing:AttachLoadBalancerToSubnets",
+                "elasticloadbalancing:ApplySecurityGroupsToLoadBalancer",
+                "elasticloadbalancing:CreateLoadBalancer",
+                "elasticloadbalancing:CreateLoadBalancerPolicy",
+                "elasticloadbalancing:CreateLoadBalancerListeners",
+                "elasticloadbalancing:ConfigureHealthCheck",
+                "elasticloadbalancing:DeleteLoadBalancer",
+                "elasticloadbalancing:DeleteLoadBalancerListeners",
+                "elasticloadbalancing:DescribeLoadBalancers",
+                "elasticloadbalancing:DescribeLoadBalancerAttributes",
+                "elasticloadbalancing:DetachLoadBalancerFromSubnets",
+                "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+                "elasticloadbalancing:ModifyLoadBalancerAttributes",
+                "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+                "elasticloadbalancing:SetLoadBalancerPoliciesForBackendServer",
+                "elasticloadbalancing:AddTags",
+                "elasticloadbalancing:CreateListener",
+                "elasticloadbalancing:CreateTargetGroup",
+                "elasticloadbalancing:DeleteListener",
+                "elasticloadbalancing:DeleteTargetGroup",
+                "elasticloadbalancing:DescribeListeners",
+                "elasticloadbalancing:DescribeLoadBalancerPolicies",
+                "elasticloadbalancing:DescribeTargetGroups",
+                "elasticloadbalancing:DescribeTargetHealth",
+                "elasticloadbalancing:ModifyListener",
+                "elasticloadbalancing:ModifyTargetGroup",
+                "elasticloadbalancing:RegisterTargets",
+                "elasticloadbalancing:SetLoadBalancerPoliciesOfListener",
+                "iam:CreateServiceLinkedRole",
+                "kms:DescribeKey"
+            ],
+            "Resource": [
+                "\*"
+            ],
+            "Effect": "Allow"
+        }
+    ]
+}
+----
+* `nodePoolManagementARN`
++
+----
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "ec2:AllocateAddress",
+                "ec2:AssociateRouteTable",
+                "ec2:AttachInternetGateway",
+                "ec2:AuthorizeSecurityGroupIngress",
+                "ec2:CreateInternetGateway",
+                "ec2:CreateNatGateway",
+                "ec2:CreateRoute",
+                "ec2:CreateRouteTable",
+                "ec2:CreateSecurityGroup",
+                "ec2:CreateSubnet",
+                "ec2:CreateTags",
+                "ec2:DeleteInternetGateway",
+                "ec2:DeleteNatGateway",
+                "ec2:DeleteRouteTable",
+                "ec2:DeleteSecurityGroup",
+                "ec2:DeleteSubnet",
+                "ec2:DeleteTags",
+                "ec2:DescribeAccountAttributes",
+                "ec2:DescribeAddresses",
+                "ec2:DescribeAvailabilityZones",
+                "ec2:DescribeImages",
+                "ec2:DescribeInstances",
+                "ec2:DescribeInternetGateways",
+                "ec2:DescribeNatGateways",
+                "ec2:DescribeNetworkInterfaces",
+                "ec2:DescribeNetworkInterfaceAttribute",
+                "ec2:DescribeRouteTables",
+                "ec2:DescribeSecurityGroups",
+                "ec2:DescribeSubnets",
+                "ec2:DescribeVpcs",
+                "ec2:DescribeVpcAttribute",
+                "ec2:DescribeVolumes",
+                "ec2:DetachInternetGateway",
+                "ec2:DisassociateRouteTable",
+                "ec2:DisassociateAddress",
+                "ec2:ModifyInstanceAttribute",
+                "ec2:ModifyNetworkInterfaceAttribute",
+                "ec2:ModifySubnetAttribute",
+                "ec2:ReleaseAddress",
+                "ec2:RevokeSecurityGroupIngress",
+                "ec2:RunInstances",
+                "ec2:TerminateInstances",
+                "tag:GetResources",
+                "ec2:CreateLaunchTemplate",
+                "ec2:CreateLaunchTemplateVersion",
+                "ec2:DescribeLaunchTemplates",
+                "ec2:DescribeLaunchTemplateVersions",
+                "ec2:DeleteLaunchTemplate",
+                "ec2:DeleteLaunchTemplateVersions"
+            ],
+            "Resource": [
+                "\*"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Condition": {
+                "StringLike": {
+                    "iam:AWSServiceName": "elasticloadbalancing.amazonaws.com"
+                }
+            },
+            "Action": [
+                "iam:CreateServiceLinkedRole"
+            ],
+            "Resource": [
+                "arn:*:iam::*:role/aws-service-role/elasticloadbalancing.amazonaws.com/AWSServiceRoleForElasticLoadBalancing"
+            ],
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "iam:PassRole"
+            ],
+            "Resource": [
+                "arn:*:iam::*:role/*-worker-role"
+            ],
+            "Effect": "Allow"
+        }
+    ]
+}
+----
+* `controlPlaneOperatorARN`
++
+----
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:CreateVpcEndpoint",
+                "ec2:DescribeVpcEndpoints",
+                "ec2:ModifyVpcEndpoint",
+                "ec2:DeleteVpcEndpoints",
+                "ec2:CreateTags",
+                "route53:ListHostedZones"
+            ],
+            "Resource": "\*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "route53:ChangeResourceRecordSets",
+                "route53:ListResourceRecordSets"
+            ],
+            "Resource": "arn:aws:route53:::%s"
+        }
+    ]
+}
+----
+
+[#hosting-cluster-aws-infra-iam-separate]
+== Creating AWS infrastructure and IAM resources separately
+
+By default, the `hcp create cluster aws` command creates cloud infrastructure with the hosted cluster and applies it. You can create the cloud infrastructure portion separately so that the `hcp create cluster aws` command can be used only to create the cluster, or render it so that you can modify it before you apply it. 
+
+To create the cloud infrastructure portion separately, you need to create the AWS infrastructure, create the AWS Identity and Access (IAM) resources, and create the cluster.
+
+[#hosting-cluster-create-aws-infra]
+=== Creating the AWS infrastructure
+
+To create the AWS infrastructure, enter the following command:
+//lahinson - july 2023 - update hypershift cli command here
+----
+hypershift create infra aws --name CLUSTER_NAME \ <1>
+    --aws-creds AWS_CREDENTIALS_FILE \ <2>
+    --base-domain BASEDOMAIN \ <3>
+    --infra-id INFRA_ID \ <4>
+    --region REGION \ <5>
+    --output-file OUTPUT_INFRA_FILE <6>
+----
+
+<1> Replace `CLUSTER_NAME` with the name of the hosted cluster that you are creating. This value is used for creating the Route 53 private hosted zones for the cluster.
+<2> Replace `AWS_CREDENTIALS_FILE` with the name of the AWS credentials file that has permissions to create infrastructure resources for your cluster, such as VPCs, subnets, and NAT gateways. This value must correspond to the AWS account for your guest cluster, where workers reside.
+<3> Replace `BASEDOMAIN` with the name of the base domain what you plan to use for your hosted cluster Ingress. This value must correspond to a Route 53 public zone that you can create records in.
+<4> Replace `INFRA_ID` with a unique name that identifies your infrastructure by using tags. This value is used by the cloud controller manager in Kubernetes and the cluster API manager to identify infrastructure for your cluster. Typically, this value is the name of your cluster (`CLUSTER_NAME`) with a suffix appended to it.
+<5> Replace `REGION` with the region where you want to create the infrastructure for your cluster.
+<6> Replace `OUTPUT_INFRA_FILE` with the name of the file where you want to store the IDs of the infrastructure in JSON format. You can use this file as input to the `hcp create cluster aws` command to populate fields in the `HostedCluster` and `NodePool` resouces.
+
+After you enter the command, the following resources are created:
+
+* One VPC
+* One DHCP option
+* One private subnet
+* One public subnet
+* One internet gateway
+* One NAT gateway
+* One security group for worker nodes
+* Two route tables: 1 private and 1 public
+* Two private hosted zones: 1 for cluster Ingress and 1 for PrivateLink, in case you create a private cluster
+
+All of those resources contain the `kubernetes.io/cluster/INFRA_ID=owned` tag, where `INFRA_ID` is the value that you specified in the command.
+
+[#hosting-cluster-create-aws-iam]
+=== Creating the AWS IAM resources
+
+To create the AWS IAM resources, enter the following command:
+//lahinson - july 2023 - update hypershift cli command here
+----
+hypershift create iam aws --infra-id INFRA_ID \ <1>
+    --aws-creds AWS_CREDENTIALS_FILE \ <2>
+    --oidc-storage-provider-s3-bucket-name OIDC_BUCKET_NAME \ <3>
+    --oidc-storage-provider-s3-region OIDC_BUCKET_REGION \ <4>
+    --region REGION \ <5>
+    --public-zone-id PUBLIC_ZONE_ID \ <6>
+    --private-zone-id PRIVATE_ZONE_ID \ <7>
+    --local-zone-id LOCAL_ZONE_ID \ <8>
+    --output-file OUTPUT_IAM_FILE <9>
+----
+
+<1> Replace `INFRA_ID` with the same ID that you specified in the `create infra aws` command. This value identifies the IAM resources that are associated with the hosted cluster.
+<2> Replace `AWS_CREDENTIALS_FILE` with the name of the AWS credentials file that has permissions to create IAM resources, such as roles. This file does not need to be the same credentials file that you specified to create the infrastructure, but it must correspond to the same AWS account.
+<3> Replace `OIDC_BUCKET_NAME` with the name of the bucket that stores the OIDC documents. This bucket was created as a prerequisite for installing hosted control planes. The name of the bucket is used to construct URLs for the OIDC provider that is created by this command.
+<4> Replace `OIDC_BUCKET_REGION` with the region where the OIDC bucket resides.
+<5> Replace `REGION` with the region where the infrastructure of the cluster is located. This value is used to create a worker instance profile for the machines that belong to the hosted cluster.
+<6> Replace `PUBLIC_ZONE_ID` with the ID of the public zone for the guest cluster. This value is used to create the policy for the Ingress Operator. You can find this value in the `OUTPUT_INFRA_FILE` that is generated by the `create infra aws` command.
+<7> Replace `PRIVATE_ZONE_ID` with the ID of the private zone for the guest cluster. This value is used to create the policy for the Ingress Operator. You can find this value in the `OUTPUT_INFRA_FILE` that is generated by the `create infra aws` command.
+<8> Replace `LOCAL_ZONE_ID` with the ID of the local zone for the guest cluster when you create a private cluster. This value is used to create the policy for the Control Plane Operator so that it can manage records for the PrivateLink endpoint. You can find this value in the `OUTPUT_INFRA_FILE` that is generated by the `create infra aws` command.
+<9> Replace `OUTPUT_IAM_FILE` with the name of the file where you plan to store the IDs of the IAM resources in JSON format. You can then use this file as input to the `hcp create cluster aws` command to populate the fields in the `HostedCluster` and `NodePool` resources.
+
+After you enter the command, the following resources are created:
+
+* One OIDC provider, which is required to enable STS authentication
+* Seven roles, which are separate for every component that interacts with the provider, such as the Kubernetes controller manager, cluster API provider, and registry
+* One instance profile, which is the profile that is assigned to all worker instances of the cluster
+
+[#hosting-cluster-create-separate]
+=== Creating the cluster
+
+To create the cluster, enter the following command:
+
+----
+hcp create cluster aws \
+    --infra-id INFRA_ID \ <1>
+    --name CLUSTER_NAME \ <2>
+    --aws-creds AWS_CREDENTIALS \ <3>
+    --pull-secret PULL_SECRET_FILE \ <4>
+    --generate-ssh \ <5>
+    --node-pool-replicas 3
+----
+
+<1> Replace `INFRA_ID` with the same ID that you specified in the `create infra aws` command. This value identifies the IAM resources that are associated with the hosted cluster.
+<2> Replace `CLUSTER_NAME` with the same name that you specified in the `create infra aws` command.
+<3> Replace `AWS_CREDENTIALS` with the same value that you specified in the `create infra aws` command.
+<4> Replace `PULL_SECRET_FILE` with the name of the file that contains a valid {ocp-short} pull secret.
+<5> The `--generate-ssh` flag is optional, but is good to include in case you need to SSH to your workers. An SSH key is generated for you and is stored as a secret in the same namespace as the hosted cluster.
+
+You can also add the `--render` flag to the command and redirect output to a file where you can edit the resources before you apply them to the cluster.
+
+After you run the command, the following resources are applied to your cluster:
+
+* A namespace
+* A secret with your pull secret
+* A `HostedCluster`
+* A `NodePool`
+* Three AWS STS secrets for control plane components
+* One SSH key secret if you specified the `--generate-ssh` flag.
+

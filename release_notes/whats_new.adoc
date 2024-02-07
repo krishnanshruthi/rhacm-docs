@@ -3,32 +3,24 @@
 
 {product-title} provides visibility of your entire Kubernetes domain with built-in governance, cluster lifecycle management, and application lifecycle management, along with observability. With this release, you can move towards managing clusters in more environments, GitOps integration for applications, and more. 
 
+Access the link:https://access.redhat.com/articles/7027073/[Support matrix] to learn about hub cluster and managed cluster requirements and support.
+
 *Important:* Some features and components are identified and released as link:https://access.redhat.com/support/offerings/techpreview[Technology Preview].
 
 * <<installation,Installation>>
-* <<web-console-whats-new,Web console>>
 * <<cluster-whats-new,Clusters>>
+* <<global-hub-whats-new,multicluster global hub>>
 * <<application-whats-new,Applications>>
+* <<observability-whats-new,Observability>>
 * <<governance-whats-new,Governance>>
-* <<add-on-whats-new,Add-ons>>
 * <<dr4hub-whats-new,Backup and restore>>
 
 [#installation]
 == Installation
 
-* You can now enable or disable the following components by updating the `MultiClusterHub` custom resource, `cluster-permission`, `multicluster-observability`, and `submariner-addon`.
+* You can now enable or disable the following components by updating the `MultiClusterHub` custom resource: `cluster-permission`, `multicluster-observability`, and `submariner-addon`.
 
-* The `MultiClusterObservability`, `SubmarinerConfig`, and `SubmarinerDiagnoseConfig` tabs are now removed from the Installed Operators page for {product-title-short}. To access the _CustomResources_, the user can access the _CustomResourceDefinitions_ page and create/update the _CustomResources_ property.
-
-[#web-console-whats-new]
-== Web console
-//team said nothing new this release, if that is the case, we can remove any section with no updates
-
-//2.9:ACM-6677
-* The observability component is deployed by the `multiclusterhub-operator`. See link:../observability/observability_arch.adoc#observability-arch[Observability architecture] for more details.
-
-//2.9:6549
-* Use the _Beta view_ switch from the _Overview_ page header for your Grafana metrics to be displayed, and filter the page data by using cluster labels. See, link:../console/console.adoc#console-overview[Console overview] for more details.
+* The `MultiClusterObservability`, `SubmarinerConfig`, and `SubmarinerDiagnoseConfig` tabs are now removed from the _Installed Operators_ page for {product-title-short}. To access the _CustomResources_, go to the _CustomResourceDefinitions_ page and create or update the `CustomResources` property.
 
 [#cluster-whats-new]
 == Cluster 
@@ -37,50 +29,56 @@ Cluster lifecycle components and features are within the {mce-short}, which is a
 
 View release notes, as well as tasks and support information at link:../clusters/cluster_mce_overview.adoc#cluster_mce_overview[Cluster lifecycle overview].
 
+[#global-hub-whats-new]
+== multicluster global hub 
+
+* You can import multiple hub clusters and manage them with a single hub cluster. See the link:../global_hub/global_hub_overview.adoc#multicluster-global-hub[multicluster global hub] documentation for more information. 
+
 [#application-whats-new]
 == Applications
 
 *Technology Preview:* Pull model is in a Technology Preview status, with limited support this release.
 
-//2.9:5868
-* You can use the Argo CD pull model to deploy resources from your hub cluster to each managed cluster with the same `ApplicationSet` custom resource definition that is used for the push model. Pull model implementation applies {ocp} registration, placement, and `manifestWork` APIs so that the hub cluster can use the secure communication channel between the hub cluster and the managed cluster to deploy resources. See link:../applications/gitops_push_pull.adoc#argo-pull-push[Deploying Argo CD with the push and pull model] for more information.
+* You can use the Argo CD pull model to deploy resources from your hub cluster to each managed cluster with the same `ApplicationSet` custom resource definition that is used for the push model. Pull model implementation applies {ocp} registration, placement, and `manifestWork` APIs so that the hub cluster can use the secure communication channel between the hub cluster and the managed cluster to deploy resources. See the link:../gitops/gitops_overview.adoc#gitops-overview[GitOps overview] for more information.
 
-//2.9:6830
 * You can now go to the topology page to view the `ApplicationSet` applications that were created by using the Argo CD pull model. 
 
 For other Application topics, see link:../applications/app_management_overview.adoc#managing-applications[Managing applications].
 
+[#observability-whats-new]
+== Observability
+
+* The observability component is deployed by the `multiclusterhub-operator`. See link:../observability/observability_arch.adoc#observability-arch[Observability architecture] for more details.
+
+* Use the _Fleet view_ switch from the _Overview_ page header for your Grafana metrics to be displayed, and filter the page data by using cluster labels. See, link:../console/console.adoc#console-overview[Console overview] for more details.
+
+* The following default alerts are provided for the Thanos compactor: `ACMThanosCompactHalted`, `ACMThanosCompactHighCompactionFailures`, `ACMThanosCompactBucketHighOperationFailures`, `ACMThanosCompactHasNotRun`. See link:../observability/observability_arch.adoc#observability-arch[Observability architecture].
+
+See link:../observability/observe_environments_intro.adoc#observing-environments-intro[Observability service introduction].
+
 [#governance-whats-new]
 == Governance
 
-//2.9:6563
-* You can reorder the columns in the policy table. See, the _Governance page_ section in the link:../governance/manage_policy_intro.adoc#grc-view[Manage security policies] topic.
+* You can now increase or reduce the volume of debug logs from the default settings. For more details, see link:../governance/policy_ctrl_adv_config.adoc#configure-debug-log[Configure debug log].
 
-//2.9:6709
-* You can use the `InformOnly` parameter to check the status of Kubernetes objects without enforcing a configuration policy, even if the parent policy `remediationAction` is set to `enforce`. See link:../governance/config_policy_ctrl.adoc#kubernetes-configuration-policy-controller[Kubernetes configuration policy controller] to learn more.
+* You can reorder the columns in the policy table. See, the _Governance page_ section in the link:../governance/manage_dashboard.adoc#grc-view[Manage Governance dashboard] topic.
 
-//2.9:1384
+* You can use the `InformOnly` parameter to check the status of Kubernetes objects without enforcing a configuration policy, even if the parent policy `remediationAction` is set to `enforce`. See link:../governance/config_policy_ctrl.adoc#kubernetes-config-policy-controller[Kubernetes configuration policy controller] to learn more.
+
 * Override the remediation action for your bound policies by using the `bindingOverrides` parameter. You can also use the `subFilter` parameter to select the bound policies. For more information, see link:../governance/policy_overview.adoc#policy-yaml-table[Policy YAML table]. 
 
-//2.9:7720
-* The governance framework supports more template functions from the Sprig library. For more details, see the xref:../governance/template_functions.adoc#open-source-community-functions[Supported Sprig open source functions].
+* The governance framework supports more template functions from the Sprig library. For more details, see the link:../governance/template_functions.adoc#open-source-community-functions[Supported Sprig open source functions].
+
+* As part of the Red Hat Insights integration with governance, the insights `PolicyReport` now uses the `timestamp` field from the policy that is in violation. For more details, see link:../governance/policy_ctrl_adv_config.adoc.
 
 See link:../governance/grc_intro.adoc#governance[Governance] to learn more about the dashboard and the policy framework.
-
-[#add-on-whats-new]
-== Add-ons
-
-//link?
-//^I'm not sure who left the comment, but I added the link | MJ | 09/14/23
-See link:../add-ons/addon_overview#add-ons-overview[Add-ons overview] for more details.
-
 
 [#dr4hub-whats-new]
 == Backup and restore
 
-//need to link to intro here
-//^ I'm not sure who added this comment, but added the link | MJ | 09/14/23
-See link:../business_continuity/backup_intro.adoc#backup-intro[Backup and restore] to learn about disaster recovery solutions for your hub cluster. 
+See link:../business_continuity/backup_restore/backup_intro.adoc#backup-intro[Backup and restore] to learn about disaster recovery solutions for your hub cluster.
+
+* When converting a snapshot to a Persistent Volume Claim with VolSync, there is now a `VolumePopulator` feature that is used to complete the conversion. See link:../business_continuity/volsync/volsync_convert_backup.adoc#volsync-convert-backup-pvc[Converting a replicated image to a usable persistent volume claim] for the updated procedure. 
 
 [#whats-new-learn-more]
 == Learn more about this release

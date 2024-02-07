@@ -11,22 +11,7 @@
 [#network-configuration-additional]
 == Additional networking requirements for infrastructure operator table
 
-When you are installing bare metal managed clusters with the Infrastructure Operator, see the following table for the additional networking requirements:
-
-|===
-| Direction | Protocol | Connection | Port (if specified)
-
-| Hub cluster outbound to BMC interface at single node {ocp-short} managed cluster
-| HTTPS (HTTP in disconnected environment)
-| Boot the {ocp-short} cluster
-| 443
-
-| Outbound from the {ocp-short} managed cluster to the hub cluster
-| HTTPS
-| Reports hardware information using the `assistedService` route 
-| 443
-
-|===
+When you are installing bare metal managed clusters with the Infrastructure Operator, see link:../clusters/about/mce_networking.adoc#mce-network-configuration[Network configuration] in the {mce} documentation for additional networking requirements.
 
 [#network-configuration-submariner]
 == Submariner networking requirements table
@@ -56,7 +41,7 @@ Clusters that are using Submariner require three open ports. The following table
 [#network-configuration-hive]
 == Additional networking requirements for Hive table
 
-When you are installing bare metal managed clusters with the Hive Operator, which includes using Central Infrastructure Management, you must configure a layer 2 or layer 3 port connection between the hub cluster and the `libvirt` provisioning host. This connection to the provisioning host is required during the creation of a base metal cluster with Hive. See the following table for more information:
+When you are installing bare metal managed clusters with the Hive Operator, which includes using central infrastructure management, you must configure a layer 2 or layer 3 port connection between the hub cluster and the `libvirt` provisioning host. This connection to the provisioning host is required during the creation of a base metal cluster with Hive. See the following table for more information:
 
 |===
 | Direction | Protocol | Connection | Port (if specified)

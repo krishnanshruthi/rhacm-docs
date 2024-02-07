@@ -23,17 +23,47 @@ Or consider a troubleshooting topic.
 
 Review the known issues for Submariner. The following list contains known issues for this release, or known issues that continued from the previous release. 
 
-For your {ocp} cluster, see link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.13/html/release_notes/ocp-4-13-release-notes#ocp-4-13-known-issues[{ocp-short} known issues][{ocp-short} known issues]]. 
+For your {ocp} cluster, see https://access.redhat.com/documentation/en-us/openshift_container_platform/4.12/html/release_notes/ocp-4-12-release-notes#ocp-4-12-known-issues. 
 
 For more about deprecations and removals, see xref:../release_notes/deprecate_remove.adoc#deprecations-removals[Deprecations and removals].
 
 [#known-issues-submariner]
 == Submariner known issues
 
+See the following known issues and limitations that might occur while using networking features.
+
+[#cluster-management-addon-needed]
+=== Without _ClusterManagementAddon_ submariner add-on fails
+//2.8:24159
+
+For versions 2.8 and earlier, when you install {product-title-short}, you also deploy the `submariner-addon` component with the Operator Lifecycle Manager. If you did not create a `MultiClusterHub` custom resource, the `submariner-addon` pod sends an error and prevents the operator from installing. 
+
+The following notification occurs because the `ClusterManagementAddon` custom resource definition is missing:
+
+----
+graceful termination failed, controllers failed with error: the server could not find the requested resource (post clustermanagementaddons.addon.open-cluster-management.io)
+----
+
+The `ClusterManagementAddon` resource is created by the `cluster-manager` deployment, however, this deployment becomes available when the `MultiClusterEngine` components are installed on the cluster. 
+
+If there is not a `MultiClusterEngine` resource that is already available on the cluster when the `MultiClusterHub` custom resource is created,  the `MultiClusterHub` operator deploys the `MultiClusterEngine` instance and the operator that is required, which resolves the previous error.
+
+[#submariner-addon-resources]
+=== Submariner add-on resources not cleaned up properly when managed clusters are imported 
+//2.9:ACM-8549
+
+If the `submariner-addon` component is set to `false` within `MultiClusterHub` (MCH) operator, then the `submariner-addon` finalizers are not cleaned up properly for the managed cluster resources. Since the finalizers are not cleaned up properly, this prevents the `submariner-addon` component from being disabled within the hub cluster. 
+
 [#not-all-infrastructure]
 === Not all of the infrastructure providers that {product-title-short} can manage are supported
 
-Submariner is not supported with all of the infrastructure providers that {product-title-short} can manage. Refer to the link:https://access.redhat.com/articles/7006295[{product-title-short} support matrix] for a list of supported providers.
+Submariner is not supported with all of the infrastructure providers that {product-title-short} can manage. Refer to the link:{support-matrix}[{product-title-short} support matrix] for a list of supported providers.
+
+[#subm-install-plan]
+=== Submariner install plan limitation
+//2.9:ACM-8260
+
+The Submariner install plan does not follow the overall install plan settings. Therefore, the operator management screen cannot control the Submariner install plan. By default, Submariner install plans are applied automatically, and the Submariner addon is always updated to the latest available version corresponding to the installed  {product-title-short} version. To change this behavior, you must use a customized Submariner subscription. 
 
 [#headless-services-globalnet]
 === Limited headless services support

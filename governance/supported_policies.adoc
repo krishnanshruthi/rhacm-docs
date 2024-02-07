@@ -32,95 +32,33 @@ Role binding policy
 | Manage role permissions and bindings using roles and role bindings. See the Kubernetes link:https://kubernetes.io/docs/reference/access-authn-authz/rbac/[RBAC documentation].
 
 | Security content constraints (SCC) policy
-| Manage workload permissions with Security Context Constraints. See link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.13/html/authentication_and_authorization/managing-pod-security-policies[Managing Security Context Constraints documentation] in the {ocp-short} documentation.
+| Manage workload permissions with Security Context Constraints. See link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.12/html/authentication_and_authorization/managing-pod-security-policies[Managing Security Context Constraints documentation] in the {ocp-short} documentation.
 
 | ETCD encryption policy
-| Ensure data security with etcd encryption. See link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.13/html/security_and_compliance/encrypting-etcd[Encrypting etcd data] in the {ocp-short} documentation.
+| Ensure data security with etcd encryption. See link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.12/html/security_and_compliance/encrypting-etcd[Encrypting etcd data] in the {ocp-short} documentation.
 
 | Compliance operator policy
-| Deploy the Compliance Operator to scan and enforce the compliance state of clusters leveraging OpenSCAP. See link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.13/html/security_and_compliance/compliance-operator#understanding-compliance-operator[Understanding the Compliance Operator] in the {ocp-short} documentation.
+| Deploy the Compliance Operator to scan and enforce the compliance state of clusters leveraging OpenSCAP. See link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.12/html/security_and_compliance/compliance-operator#understanding-compliance-operator[Understanding the Compliance Operator] in the {ocp-short} documentation.
 
 | Compliance operator E8 scan
-| After applying the Compliance operator policy, deploy an Essential 8 (E8) scan to check for compliance with E8 security profiles. See link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.13/html/security_and_compliance/compliance-operator#understanding-compliance-operator[Understanding the Compliance Operator] in the {ocp-short} documentation.
+| After applying the Compliance operator policy, deploy an Essential 8 (E8) scan to check for compliance with E8 security profiles. See link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.12/html/security_and_compliance/compliance-operator#understanding-compliance-operator[Understanding the Compliance Operator] in the {ocp-short} documentation.
 
 | Compliance operator CIS scan
-| After applying the Compliance operator policy, deploy a Center for Internet Security (CIS) scan to check for compliance with CIS security profiles. See link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.13/html/security_and_compliance/compliance-operator#understanding-compliance-operator[Understanding the Compliance Operator] in the {ocp-short} documentation.
+| After applying the Compliance operator policy, deploy a Center for Internet Security (CIS) scan to check for compliance with CIS security profiles. See link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.12/html/security_and_compliance/compliance-operator#understanding-compliance-operator[Understanding the Compliance Operator] in the {ocp-short} documentation.
 
 | Image vulnerability policy
 | Deploy the Container Security Operator and detect known image vulnerabilities in pods running on the cluster. See the link:https://github.com/quay/container-security-operator#readme[Container Security Operator] GitHub repository.
 
 | Gatekeeper operator deployment
-| Gatekeeper is an admission webhook that enforces custom resource definition (CRD)-based policies executed by the Open Policy Agent (OPA) policy engine. See the link:https://open-policy-agent.github.io/gatekeeper/website/docs/[Gatekeeper] documentation.
+| Gatekeeper is an admission webhook that enforces custom resource definition-based policies that are run by the Open Policy Agent (OPA) policy engine. See the link:https://open-policy-agent.github.io/gatekeeper/website/docs/[Gatekeeper] documentation.
 
 | Gatekeeper compliance policy
 | After deploying Gatekeeper to the clusters, deploy this sample Gatekeeper policy that ensures namespaces that are created on the cluster are labeled as specified.
 |===
 
-[#support-matrix-policy]
-== Support matrix for out-of-box policies
+{ocp} 4.x also supports the {product-title-short} configuration policies.
 
-.Support matrix
-|===
-| Policy | {ocp} 3.11 | {ocp} 4 
-
-| Memory usage policy
-| x
-| x
-
-| Namespace policy
-| x
-| x
-
-| Image vulnerability policy
-| x
-| x
-
-| Pod policy
-| x
-| x
-
-| Pod security policy (deprecated)
-|
-|
-
-| Role policy
-| x
-| x
-
-| Role binding policy
-| x
-| x
-
-| Security Context Constraints policy (SCC)
-| x
-| x
-
-| ETCD encryption policy
-|
-| x
-
-| Gatekeeper policy
-|
-| x
-
-| Compliance operator policy
-|
-| x
-
-| E8 scan policy
-|
-| x
-
-| OpenShift CIS scan policy
-|
-| x
-
-| Policy set 
-|
-| x
-|===
-
-View the following policy samples to view how specific policies are applied:
+View the following policy documentation to learn how policies are applied:
 
 * xref:../governance/image_vuln_policy.adoc#image-vulnerability-policy-sample[Image vulnerability policy]
 * xref:../governance/memory_policy.adoc#memory-usage-policy[Memory usage policy]

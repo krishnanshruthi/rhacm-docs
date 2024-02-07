@@ -1,0 +1,26 @@
+[#hypershift-cluster-destroy-aws]
+= Destroying a hosted cluster on AWS
+
+To destroy a hosted cluster and its managed cluster resource, complete the following steps:
+
+. Delete the managed cluster resource on {mce-short} by running the following command:
+
++
+[source,bash]
+----
+oc delete managedcluster <cluster_name>
+----
+
++
+where `_cluster_name_` is the name of your cluster.
+
+. Delete the hosted cluster and its back-end resources by running the following command:
+
++
+[source,bash]
+----
+hcp destroy cluster aws --name <cluster_name> --infra-id <infra_id> --aws-creds <aws-credentials> --base-domain <base_domain>
+----
+
++
+Replace names where necessary.

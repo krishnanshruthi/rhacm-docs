@@ -23,9 +23,31 @@ Or consider a troubleshooting topic.
 
 Review the known issues for {product-title}. The following list contains known issues for this release, or known issues that continued from the previous release. 
 
-For your {ocp} cluster, see link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.13/html/release_notes/ocp-4-13-release-notes#ocp-4-13-known-issues[{ocp-short} known issues][{ocp-short} known issues]. 
+For your {ocp} cluster, see https://access.redhat.com/documentation/en-us/openshift_container_platform/4.12/html/release_notes/ocp-4-12-release-notes#ocp-4-12-known-issues. 
 
 For more about deprecations and removals, see xref:../release_notes/deprecate_remove.adoc#deprecations-removals[Deprecations and removals].
+
+[#permission-to-managed-cluster-monitoring-denied]
+== Permission to managed cluster monitoring denied after installing or upgrading 2.9
+//2.9:8499
+
+Starting with {product-title-short} 2.9, you must use a label in your defined {product-title-short} hub cluster namespace. The label, `openshift.io/cluster-monitoring: "true"` causes the Cluster Monitoring Operator to scrape the namespace for metrics. 
+
+When {product-title-short} 2.9 is deployed or an installation is upgraded to 2.9, the {product-title-short} Observability `ServiceMonitors` and `PrometheusRule` resources are no longer present in the `openshift-monitoring` namespace. 
+
+
+[#lack-of-support-for-proxy-settings]
+== Lack of support for proxy settings
+//2.9:7118
+
+The Prometheus `AdditionalAlertManagerConfig` resource of the observability add-on does not support proxy settings. You must disable the observability alert forwarding feature. 
+
+Complete the following steps to disable alert forwarding:
+
+. Go to the `MultiClusterObservability` resource.
+. Update the `mco-disabling-alerting` parameter value to `true`
+
+The HTTPS proxy with a self-signed CA certificate is not supported. 
 
 [#duplicate-local-clusters-in-kubernetes-service-level-overview-api-server-dashboard]
 == Duplicate local-clusters on Service-level Overview dashboard
@@ -131,7 +153,7 @@ addon.open-cluster-management.io/search_memory_limit=1024Mi
 
 The Grafana dashboard shows an empty label list if the `disableHubSelfManagement` parameter is set to `true` in the `mulitclusterengine` custom resource. You must set the parameter to `false` or remove the parameter to see the label list. See link:../install/adv_config_install.adoc#disable-hub-self-management[disableHubSelfManagement] for more details.
 
-[fqdn-not-supported]
+[#fqdn-not-supported]
 === Endpoint URL cannot have fully qualified domain names (FQDN)
 //2.7:ACM-4806
 
@@ -148,3 +170,35 @@ Enter the URL without the protocol. Your `endpoint` value must resemble the foll
 ----
 endpoint: example.com:443
 ----
+
+[#grafana-downsampled-mismatch]
+=== Grafana downsampled data mismatch
+//2.7:ACM-3748
+
+When you attempt to query historical data and there is a discrepancy between the calculated step value and downsampled data, the result is empty. For example, if the calculated step value is `5m` and the downsampled data is in a one-hour interval, data does not appear from Grafana.
+
+This discrepancy occurs because a URL query parameter must be passed through the Thanos Query front-end data source. Afterwards, the URL query can perform additional queries for other downsampling levels when data is missing.
+
+You must manually update the Thanos Query front-end data source configuration. Complete the following steps:
+
+. Go to the Query front-end data source.
+
+. To update your query parameters, click the _Misc_ section.
+
+. From the _Custom query parameters_ field, select *`max_source_resolution=auto`*.
+
+. To verify that the data is displayed, refresh your Grafana page. 
+
+Your query data appears from the Grafana dashboard.
+
+[#metrics-proxy-not-detected]
+== Metrics collector does not detect proxy configuration
+//2.9:ACM-8488
+
+A proxy configuration in a managed cluster that you configure by using the `addonDeploymentConfig` is not detected by the metrics collector. As a workaround, you can enable the proxy by removing the managed cluster `ManifestWork`. Removing the `ManifestWork` forces the changes in the `addonDeploymentConfig` to be applied.
+
+[#proxy-ca-not-supported]
+== HTTPS proxy with a custom CA bundle is not supported
+//2.9:ACM-8488
+
+A proxy configuration in a managed cluster does not work when a custom CA bundle is required.

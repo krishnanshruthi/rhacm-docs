@@ -24,12 +24,53 @@ Or consider a troubleshooting topic.
 Review the known issues for cluster lifecycle with {mce-short}. The following list contains known issues for this release, or known issues that continued from the previous release. For your {ocp-short} cluster, see link:https://access.redhat.com/documentation/en-us/openshift_container_platform/4.12[{ocp-short} release notes].
 
 * <<cluster-lifecycle-issues-mce,Cluster lifecycle>>
-* <<hosted-control-plane-mce,Hosted control plane>>
+* <<hosted-control-plane-mce,Hosted control planes>>
 
 [#cluster-lifecycle-issues-mce]
 == Cluster management
 
 Cluster lifecycle known issues and limitations are part of the Cluster lifecycle with {mce-short} documentation.
+
+[#limitation-with-nmstate]
+=== Limitation with _nmstate_
+//2.9:9128
+
+Develop quicker by configuring copy and paste features. To configure the `copy-from-mac` feature in the the `assisted-installer`, you must add the `mac-address` to the `nmstate` definition interface and the `mac-mapping` interface. The `mac-mapping` interface is provided outside the `nmstate` definition interface. As a result, you must provide the same `mac-address` twice. 
+
+[#a-storageversionmigration-error]
+=== A `StorageVersionMigration` error 
+//2.9:8832
+
+When you upgrade from {mce-short} from 2.4.0 to 2.4.1, you might find a `StorageVersionMigration` error in the log of the `cluster-manager` pods that run in the `multicluster-engine` namespace. These error messages have no impact on {mce-short}. Therefore, you do not need to take any action to resolve these errors. 
+
+See the following sample of the error message: 
+
+----
+"CRDMigrationController" controller failed to sync "cluster-manager", err: ClusterManager.operator.open-cluster-management.io "cluster-manager" is invalid: status.conditions[5].reason: Invalid value: "StorageVersionMigration Failed. ": status.conditions[5].reason in body should match '^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$' 
+----
+
+You might also find an error in the condition in the status of `StorageVersionMigration managedclustersetbindings.v1beta1.cluster.open-cluster-management.io` and `managedclustersets.v1beta1.cluster.open-cluster-management.io`. See the following sample of the error message:
+
+----
+status:
+  conditions:
+  - lastUpdateTime: "2023-11-29T20:28:14Z"
+    message: 'failed to list resources: the server could not find the requested resource'
+    status: "True"
+    type: Failed 
+---- 
+
+[#lack-of-support-for-cluster-proxy-add-on]
+=== Lack of support for cluster proxy add-on
+//2.9:7118
+
+The cluster proxy add-on does not support proxy settings between the {mce-short} hub cluster and the managed cluster. If there is a proxy server between the {mce-short} hub cluster and the managed cluster, you can disable the cluster proxy add-on. 
+
+[#prehook-failure-hosted-cluster]
+=== Prehook failure does not fail the hosted cluster creation 
+//2.9:8350
+
+If you use the automation template for the hosted cluster creation and the prehook job fails, then it looks like the hosted cluster creation is still progressing. This is normal because the hosted cluster was designed with no complete failure state, and therefore, it keeps trying to create the cluster.
 
 [#volsync-remove-csv-managed]
 === Manual removal of the VolSync CSV required on managed cluster when removing the add-on
@@ -190,7 +231,7 @@ You cannot delete the namespace of a managed cluster manually. The managed clust
 === Hub cluster and managed clusters clock not synced
 // 2.1:5636
 
-Hub cluster and manage cluster time might become out-of-sync, displaying in the console `unknown` and eventually `available` within a few minutes. Ensure that the {ocp-short} hub cluster time is configured correctly. See link:https://docs.openshift.com/container-platform/4.13/installing/install_config/installing-customizing.html[Customizing nodes].
+Hub cluster and manage cluster time might become out-of-sync, displaying in the console `unknown` and eventually `available` within a few minutes. Ensure that the {ocp-short} hub cluster time is configured correctly. See link:https://docs.openshift.com/container-platform/4.12/installing/install_config/installing-customizing.html[Customizing nodes].
 
 [#importing-certain-versions-of-ibm-red-hat-openshift-kubernetes-service-clusters-is-not-supported]
 === Importing certain versions of IBM {ocp-short} Kubernetes Service clusters is not supported
@@ -316,8 +357,8 @@ status:
   bootArtifacts:
     initrd: https://assisted-image-service-multicluster-engine.redhat.com/images/0000/pxe-initrd?api_key=0000000&arch=x86_64&version=4.11
     ipxeScript: https://assisted-service-multicluster-engine.redhat.com/api/assisted-install/v2/infra-envs/00000/downloads/files?api_key=000000000&file_name=ipxe-script
-    kernel: https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/4.11/latest/rhcos-live-kernel-x86_64
-    rootfs: https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/4.11/latest/rhcos-live-rootfs.x86_64.img
+    kernel: https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/4.12/latest/rhcos-live-kernel-x86_64
+    rootfs: https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/4.12/latest/rhcos-live-rootfs.x86_64.img
 ----
 
 . Create a proxy server to expose the `bootArtifacts` with short URLs.
@@ -343,10 +384,10 @@ oc patch clusterdeployment <clusterdeployment-name> -p '{"metadata":{"finalizers
 ----
 
 [#discon-disc-iso-cluster-no-install]
-=== A cluster deployed in a disconnected environment by using the CIM service might not install
+=== A cluster deployed in a disconnected environment by using the central infrastructure management service might not install
 //2.7:ACM3209
 
-When you deploy a cluster in a disconnected environment by using the Central Infrastructure Management service, the cluster nodes might not start installing. 
+When you deploy a cluster in a disconnected environment by using the central infrastructure management service, the cluster nodes might not start installing. 
 
 This issue occurs because the cluster uses a discovery ISO image that is created from the Red Hat Enterprise Linux CoreOS live ISO image that is shipped with {ocp-short} versions 4.12.0 through 4.12.2. The image contains a restrictive `/etc/containers/policy.json` file that requires signatures for images sourcing from `registry.redhat.io` and `registry.access.redhat.com`. In a disconnected environment, the images that are mirrored might not have the signatures mirrored, which results in the image pull failing for cluster nodes at discovery. The Agent image fails to connect with the cluster nodes, which causes communication with the assisted service to fail.
 
@@ -389,7 +430,7 @@ After this setting is changed, the clusters install.
 === Managed cluster stuck in _Pending_ status after deployment
 //2.8:ACM-5813
 
-If the Assisted Installer agent starts slowy and you delpoy a managed cluster, the managed cluster might become stuck in the `Pending` status and not have any agent resources. You can work around the issue by disabling converged flow. Complete the following steps:
+If the Assisted Installer agent starts slowly and you deploy a managed cluster, the managed cluster might become stuck in the `Pending` status and not have any agent resources. You can work around the issue by disabling converged flow. Complete the following steps:
 
 . Create the following ConfigMap on the hub cluster:
 +
@@ -431,14 +472,26 @@ Error querying resource logs:
 Service unavailable
 ----
 
+[#manageserviceaccount-addon-limitation]
+=== Managed Service Account add-on limitations
+//2.9:ACM-8586
+
+The following are known issues and limitations for the `managed-serviceaccount` add-on:
+
+[#manageserviceaccount-does-not-support-ocp]
+==== The `managed-serviceaccount` does not support {ocp-short} 3.11
+//2.9:ACM-8586
+
+The `managed-serviceaccount` add-on crashes if you run it on {ocp-short} 3.11. 
+
 [#installnamespace-field-limit]
-=== _installNamespace_ field can only have one value
+==== _installNamespace_ field can only have one value
 //2.9:ACM-7523
 
 When enabling the `managed-serviceaccount` add-on, the `installNamespace` field in the `ManagedClusterAddOn` resource must have `open-cluster-management-agent-addon` as the value. Other values are ignored. The `managed-serviceaccount` add-on agent is always deployed in the `open-cluster-management-agent-addon` namespace on the managed cluster.
 
 [#settings-limit-msa-agent]
-=== _tolerations_ and _nodeSelector_ settings do not affect the _managed-serviceaccount_ agent
+==== _tolerations_ and _nodeSelector_ settings do not affect the _managed-serviceaccount_ agent
 //2.9:ACM-7523
 
 The `tolerations` and `nodeSelector` settings configured on the `MultiClusterEngine` and `MultiClusterHub` resources do not affect the `managed-serviceaccount` agent deployed on the local cluster. The `managed-serviceaccount` add-on is not always required on the local cluster.
@@ -453,8 +506,18 @@ If the `managed-serviceaccount` add-on is required, you can work around the issu
 
 See link:../../add-ons/configure_nodeselector_tolerations_addons.adoc#configure-nodeselector-tolerations-addons[Configuring nodeSelectors and tolerations for klusterlet add-ons] to learn more about how to use the `addonDeploymentConfig` custom resource to configure `tolerations` and `nodeSelector` for add-ons.
 
+[#proxy-addon-limitation]
+=== Cluster proxy add-on limitations
+//2.9:ACM-7110
+
+The `cluster-proxy-addon` does not work when there is another proxy configuration on your hub cluster or managed clusters. The following scenarios causes this issue:
+ 
+* There is a cluster-wide-proxy configuration on your hub cluster and managed cluster.
+
+* There is a proxy configuration in the agent `AddOnDeploymentConfig` resource.
+
 [#hosted-control-plane-mce]
-== Hosted control plane
+== Hosted control planes
 
 [#console-hosted-pending-import]
 === Console displays hosted cluster as Pending import 
@@ -473,3 +536,55 @@ When you use the console to add a new node pool to an existing hosted cluster, t
 //2.8:ACM-6279
 
 You can specify a custom ingress domain by using the `ClusterDeployment` resource while installing a managed cluster, but the change is only applied after the installation by using the `SyncSet` resource. As a result, the `spec` field in the `clusterdeployment.yaml` file displays the custom ingress domain you specified, but the `status` still displays the default domain.
+
+[#deleted-nodes-shown-in-console]
+=== The web console lists nodes even after they are removed from the cluster and returned to the infrastructure environment
+//2.9:ACM-8334
+
+When a node pool is scaled down to 0 workers, the list of hosts in the console still shows nodes in a `Ready` state. You can verify the number of nodes in two ways:
+
+* In the console, go to the node pool and verify that it has 0 nodes.
+* On the command line interface, run the following commands:
+
+** Verify that 0 nodes are in the node pool by running the following command:
+
++
+[source,bash]
+----
+oc get nodepool -A
+----
+
+** Verify that 0 nodes are in the cluster by running the following command:
+
++
+[source,bash]
+----
+oc get nodes --kubeconfig
+----
+
+** Verify that 0 agents are reported as bound to the cluster by running the following command:
+
++
+[source,bash]
+----
+oc get agents -A
+----
+
+[#hosted-cluster-dual-stack]
+=== Potential DNS issues in hosted clusters configured for a dual-stack network
+//2.9:ACM-8527
+
+When you create a hosted cluster in an environment that uses the dual-stack network, you might encounter the following DNS-related issues:
+
+* `CrashLoopBackOff` state in the `service-ca-operator` pod: When the pod tries to reach the Kubernetes API server through the hosted control plane, the pod cannot reach the server because the data plane proxy in the `kube-system` namespace cannot resolve the request. This issue occurs because in the HAProxy setup, the front end uses an IP address and the back end uses a DNS name that the pod cannot resolve.
+* Pods stuck in `ContainerCreating` state: This issue occurs because the `openshift-service-ca-operator` cannot generate the `metrics-tls` secret that the DNS pods need for DNS resolution. As a result, the pods cannot resolve the Kubernetes API server.
+
+To resolve those issues, configure the DNS server settings by following the guidelines in xref:../hosted_control_planes/dual_stack_dns.adoc#dual-stack-dns[Configuring DNS for a dual stack network].
+
+[#hosted-agent-ignition-bug]
+=== On bare metal platforms, Agent resources might fail to pull ignition 
+//2.9:ACM-8736
+
+On the bare metal (Agent) platform, the hosted control planes feature periodically rotates the token that the Agent uses to pull ignition. A bug causes the new token to not be propagated. As a result, if you have an Agent resource that was created some time ago, it might fail to pull ignition.
+
+As a workaround, in the Agent specification, delete the secret that the `IgnitionEndpointTokenReference` property refers to, and then add or modify any label on the Agent resource. The system can then detect that the Agent resource was modified and re-create the secret with the new token.

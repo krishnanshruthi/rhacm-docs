@@ -15,7 +15,7 @@ You can also verify that the backed up resources that are contained by the backu
 
 *Note:* The `restore.cluster.open-cluster-management.io` resource runs once unless you use the `syncRestoreWithNewBackups` option and set it to `true`, as mentioned in the <<restore-passive-resources,Restore passive resources>> section. If you want to run the same restore operation again after the restore operation is complete, you must create a new `restore.cluster.open-cluster-management.io` resource with the same `spec` options.
 
-The restore operation is used to restore all 3 backup types that are created by the backup operation. Yu can choose to install only a certain type of backup (only managed clusters, only user credentials, or only hub cluster resources).
+The restore operation is used to restore all 3 backup types that are created by the backup operation. You can choose to install only a certain type of backup, such as only managed clusters, only user credentials, or only hub cluster resources.
 
 The restore defines the following 3 required `spec` properties, where the restore logic is defined for the types of backed up files:
 
@@ -55,7 +55,14 @@ spec:
   veleroResourcesBackupName: latest
 ----
 
-*Note:* Only managed clusters created by the Hive API are automatically connected with the new hub cluster when the `acm-managed-clusters` backup from the managed clusters backup is restored on another hub cluster. All other managed clusters remain in the `Pending Import` state and must be imported back onto the new hub cluster. For more information, see <<restore-imported-managed-clusters,Restoring imported managed clusters (Technology Preview)>>.
+*Note:* Only managed clusters created by the Hive API are automatically connected with the new hub cluster when the `acm-managed-clusters` backup from the managed clusters backup is restored on another hub cluster. All other managed clusters remain in the `Pending Import` state and must be imported back onto the new hub cluster. For more information, see <<restore-imported-managed-clusters,Restoring imported managed clusters>>.
+
+[#restoring-data-primary-hub]
+== Restoring data back to the initial primary hub 
+
+When you need to restore backup data on a cluster, create a new cluster. During the hub cluster restore operation, you can configure the hub cluster backup restore to clean up the existing resources, if these resources are not part of the backup data being restored. The restore cleans up resources created by an earlier backup but does not clean up user resources. As a result, resources created by the user on this hub cluster are not cleaned up, so the data on this hub cluster is not reflective of the data available with the restored resource.
+
+A disaster recovery test is an example situation where you can use an existing hub cluster. In a recovery test, you are only testing the hub backup scenario. In this situation, the initial primary hub cluster does not create new resources. Instead, the backup data has temporarily changed sides from the primary hub cluster to the passive hub cluster.  
 
 [#prepare-new-hub]
 == Preparing the new hub cluster 
@@ -143,6 +150,8 @@ spec:
 [#restore-activation-resources]
 == Restoring activation resources
 
+Before you restore the activation data on the passive hub cluster, shut down the previous hub cluster where the backup was created. If the primary hub cluster is still running, it attempts to reconnect with the managed clusters that are no longer available, based on the reconciliation procedure running on this hub cluster.
+
 Use the `restore-acm-passive-activate` sample when you want the hub cluster to manage the clusters. In this case it is assumed that the other data has been restored already on the hub cluster that using the passive resource.
 
 [source,yaml]
@@ -164,6 +173,11 @@ You have some options to restore activation resources, depending on how you rest
 - If you used the `restore-acm-passive-sync cluster.open-cluster-management.io` resource as documented in the _Restore passive resources while checking for backups to restore passive data_ section, update the `veleroManagedClustersBackupName` value to `latest` on this resource. As a result, the managed cluster resources and the `restore-acm-passive-sync` resource are restored.
 
 - If you restored the passive resources as a one time operation, or did not restore any resources yet, choose to restore all resources as specified in the _Restoring all resources_ section.
+
+[#managed-cluster-activation-data]
+== Restoring managed cluster activation data
+
+Managed cluster activation data or other activation data resources are stored by the managed clusters backup and by the resource-generic backups, when you use the `cluster.open-cluster-management.io/backup: cluster-activation` label. When the activation data is restored on a new hub cluster, managed clusters are being actively managed by the hub cluster where the restore is run. See _Scheduling and restoring backups_ to learn how you can use the operator.
 
 [#restore-all-resources]
 == Restoring all resources
@@ -319,11 +333,6 @@ Events:
   Normal  Velero restore created:  36m   Restore controller  example-acm-credentials-hive-schedule-20220406171919
 ----
 
-[#primary-cluster-shut-down]
-== Shutting down the primary cluster
-
-When you restore a backup on a new hub cluster, make sure that the previous hub cluster, where the backup was created, is shut down. If that cluster is running, the previous hub cluster tries to reimport the managed clusters when the managed cluster reconciliation finds that the managed clusters are no longer available.
-
 [#dr4hub-restore-resources]
 == Additional resources
 
@@ -331,4 +340,4 @@ When you restore a backup on a new hub cluster, make sure that the previous hub 
 
 - See link:../../clusters/cluster_lifecycle/import_cli.adoc#importing-the-cluster-auto-import-secret[Importing the cluster with the auto import secret].
 
-- Return to <<restore-backup,Restoring a backup>>.
+- See xref:../backup_restore/backup_schedule.adoc#using-backup-restore[Scheduling and restoring backups].
